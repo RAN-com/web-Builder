@@ -2,16 +2,17 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "../Firebase/Firebase";
 import { collection, getDocs, query, where, doc, deleteDoc } from "firebase/firestore";
+import HomeSection from "../Cardinputform/Home";
 
 const UserDetail = () => {
   const { pathName } = useParams();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
-  const [sortOrder, setSortOrder] = useState("asc");
+  
 
   useEffect(() => {
     fetchUsers();
-  }, [pathName, sortOrder]);
+  }, [pathName]);
 
   const fetchUsers = async () => {
     try {
@@ -50,34 +51,36 @@ const UserDetail = () => {
   };
 
   if (users.length === 0) {
-    return <p className="text-center text-gray-500 mt-10">No users found...</p>;
+    return <p className="text-center text-gray-500 mt-10">Loading...</p>;
   }
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 sm:p-8 border rounded-lg shadow-lg bg-white">
+    <div className="max-w-md mx-auto mt-10 p-6 sm:p-8 border bg-blue-500 rounded-lg shadow-lg ">
       <h2 className="text-2xl sm:text-3xl font-bold text-center">User Details</h2>
-      <div className="mb-4 flex justify-end">
-        <button
-          onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-          className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition"
-        >
-          Sort {sortOrder === "asc" ? "Descending" : "Ascending"}
-        </button>
+      <div className="mb-4 flex justify-end bg-blue-600">
+        
       </div>
       {users.map((user) => (
-        <div key={user.id} className="p-4 bg-white shadow-sm rounded-lg flex justify-between">
-          <div>
+        <div key={user.id} className="space-y-8 gap-5 rounded-lg   justify-between">
+          <div className="p-10  bg-white shadow-sm justify-center text-center">
             <p className="text-lg font-semibold">{user.name}</p>
             <p className="text-gray-600">Number: {user.number}</p>
+            <p className="text-gray-600">Number: {user.number}</p>
+                <p className="text-gray-600">Email: {user.email}</p>
+                
+              
           </div>
-          <button
-            onClick={() => handleDelete(user.id)}
-            className="px-3 py-1 text-white bg-red-500 hover:bg-red-600 rounded"
-          >
-            Delete
-          </button>
+          <div className="p-10  bg-white shadow-sm">
+          
+                <p className="text-gray-500 text-sm">{user.about}</p>
+              
+          </div>
+          
+      
         </div>
+        
       ))}
+      
     </div>
   );
 };

@@ -1,8 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./elements/Navbar";
 import UserCards from "./Cardinputform/inputform";
-import UserDetail from "./Cardinputform/Usercard";
+import UserDetail from "./Cardoutput/Usercard";
 import Home from "./Navlink/Home";
+import Inputlayout from "./Layout/Inputlayout";
+import OutputLayout from "./Layout/OutputLayout";
+import History from "./History/History";
+import EditUserPage from "./Edit/EditUser";
 
 const AppContent = () => {
   const location = useLocation();
@@ -31,17 +35,33 @@ const AppContent = () => {
               </div>
             }
           />
+            <Route
+            path="/history"
+            element={
+              <div className="bg-[#f0f8ff] w-full rounded-[50px] h-screen flex flex-col  overflow-y-auto">
+                <History />
+              </div>
+            }
+          />
+            <Route
+            path="/edit/:id"
+            element={
+              <div className="bg-[#f0f8ff] w-full rounded-[50px] h-screen flex flex-col  overflow-y-auto">
+                <EditUserPage />
+              </div>
+            }
+          />
           {/* Add User Page */}
           <Route
             path="/add"
             element={
               <div className="bg-[#f0f8ff] w-full rounded-[50px] h-screen flex flex-col justify-center overflow-y-auto">
-                <UserCards />
+                <Inputlayout />
               </div>
             }
           />
           {/* User Detail Page (No Navbar) */}
-          <Route path="/user/:pathName" element={<UserDetail />} />
+          <Route path="/user/:pathName" element={<OutputLayout />} />
         </Routes>
       </div>
     </>

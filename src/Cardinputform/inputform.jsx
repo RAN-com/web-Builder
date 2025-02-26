@@ -1,13 +1,19 @@
 import { useState, useEffect } from "react";
 import { db } from "../Firebase/Firebase";
-import { collection, addDoc, getDocs, doc, deleteDoc, query, where } from "firebase/firestore";
-import { Link } from "react-router-dom";
+import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { Link, useNavigate } from "react-router-dom";
+import AboutInput from "../Cardoutput/Usercard"; // Import the AboutInput component
 
 const UserCards = () => {
   const [users, setUsers] = useState([]);
   const [name, setName] = useState("");
   const [number, setNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [about, setAbout] = useState("");
   const [pathName, setPathName] = useState("");
+  const [editingUserId, setEditingUserId] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchUsers();
@@ -26,44 +32,69 @@ const UserCards = () => {
     }
   };
 
-  const checkPathNameExists = async (path) => {
-    const usersCollection = collection(db, "users");
-    const q = query(usersCollection, where("pathName", "==", path));
-    const querySnapshot = await getDocs(q);
-    return !querySnapshot.empty;
+  const logHistory = async (action) => {
+    try {
+      await addDoc(collection(db, "history"), {
+        action,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      console.error("Error logging history:", error);
+    }
   };
 
-  const handleAddUser = async () => {
-    if (!name || !number || !pathName) {
+  const handleAddOrUpdateUser = async () => {
+    if (!name || !number || !email || !imageUrl || !about || !pathName) {
       alert("All fields are required.");
       return;
     }
 
     const formattedPathName = pathName.toLowerCase().replace(/\s+/g, "-");
 
-    if (await checkPathNameExists(formattedPathName)) {
-      alert("Path Name already exists! Please choose a different one.");
-      return;
+    if (editingUserId) {
+      try {
+        const userRef = doc(db, "users", editingUserId);
+        await updateDoc(userRef, { name, number, email, imageUrl, about, pathName: formattedPathName });
+        setUsers(users.map(user => user.id === editingUserId ? { id: editingUserId, name, number, email, imageUrl, about, pathName: formattedPathName } : user));
+        setEditingUserId(null);
+        await logHistory(`Updated user: ${name}`);
+      } catch (error) {
+        console.error("Error updating user:", error);
+      }
+    } else {
+      try {
+        const docRef = await addDoc(collection(db, "users"), { name, number, email, imageUrl, about, pathName: formattedPathName });
+        setUsers([...users, { id: docRef.id, name, number, email, imageUrl, about, pathName: formattedPathName }]);
+        await logHistory(`Added user: ${name}`);
+      } catch (error) {
+        console.error("Error adding user:", error);
+      }
     }
 
-    const newUser = { name, number, pathName: formattedPathName };
-
-    try {
-      const docRef = await addDoc(collection(db, "users"), newUser);
-      setUsers((prevUsers) => [...prevUsers, { id: docRef.id, ...newUser }]);
-      setName("");
-      setNumber("");
-      setPathName("");
-    } catch (error) {
-      console.error("Error adding user:", error);
-    }
+    setName("");
+    setNumber("");
+    setEmail("");
+    setImageUrl("");
+    setAbout("");
+    setPathName("");
   };
 
-  const handleDeleteUser = async (userId) => {
+  const handleEditUser = (user) => {
+    setEditingUserId(user.id);
+    setName(user.name);
+    setNumber(user.number);
+    setEmail(user.email);
+    setImageUrl(user.imageUrl);
+    setAbout(user.about);
+    setPathName(user.pathName);
+  };
+
+  const handleDeleteUser = async (userId, userName) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
         await deleteDoc(doc(db, "users", userId));
-        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
+        setUsers(users.filter((user) => user.id !== userId));
+        await logHistory(`Deleted user: ${userName}`);
       } catch (error) {
         console.error("Error deleting user:", error);
       }
@@ -75,57 +106,23 @@ const UserCards = () => {
       <h2 className="text-2xl font-bold text-center mb-4">User ID Cards</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-gray-100 p-5 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-3">Add New User</h3>
+          <h3 className="text-lg font-semibold mb-3">{editingUserId ? "Edit User" : "Add New User"}</h3>
           <div className="flex flex-col gap-3">
-            <input
-              type="text"
-              placeholder="Enter Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="border p-2 rounded w-full"
-            />
-            <input
-              type="number"
-              placeholder="Enter Number"
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
-              className="border p-2 rounded w-full"
-            />
-            <input
-              type="text"
-              placeholder="Enter Path Name (e.g., john-doe)"
-              value={pathName}
-              onChange={(e) => setPathName(e.target.value.toLowerCase().replace(/\s+/g, "-"))}
-              className="border p-2 rounded w-full"
-            />
-            <button
-              onClick={handleAddUser}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
-            >
-              Add User
+            <input type="text" placeholder="Enter Name" value={name} onChange={(e) => setName(e.target.value)} className="border p-2 rounded w-full" />
+            <input type="number" placeholder="Enter Number" value={number} onChange={(e) => setNumber(e.target.value)} className="border p-2 rounded w-full" />
+            <input type="email" placeholder="Enter Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 rounded w-full" />
+            <input type="text" placeholder="Enter Image URL" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="border p-2 rounded w-full" />
+            <AboutInput about={about} setAbout={setAbout} />
+            <input type="text" placeholder="Enter Path Name" value={pathName} onChange={(e) => setPathName(e.target.value.toLowerCase().replace(/\s+/g, "-"))} className="border p-2 rounded w-full" />
+            <button onClick={handleAddOrUpdateUser} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">
+              {editingUserId ? "Update User" : "Add User"}
+            </button>
+            <button onClick={() => navigate("/history")} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">
+              View History
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-4">
-          {users.map((user) => (
-            <div key={user.id} className="border p-4 rounded-lg shadow-md bg-white flex justify-between items-center">
-              <div>
-                <Link to={`/user/${user.pathName}`}>
-                  <h3 className="text-lg font-semibold text-blue-500 hover:underline cursor-pointer">
-                    {user.name}
-                  </h3>
-                </Link>
-                <p className="text-gray-600">Number: {user.number}</p>
-              </div>
-              <button
-                onClick={() => handleDeleteUser(user.id)}
-                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
-        </div>
+       
       </div>
     </div>
   );
